@@ -74,6 +74,17 @@ public class Database {
         }
     }
 
+    public int getTimes(String thisDate){
+        refresh(MyApplication.getContext());
+        int times = 0;
+        Cursor cursor =db.query("duration" + thisDate,null,null,null,null,null,null);
+        if (cursor.moveToFirst()){
+            do {
+                times += 1;
+            }while(cursor.moveToNext());
+        }
+        return times;
+    }
     public int getTimes(){
         refresh(MyApplication.getContext());
         int times = 0;
@@ -111,6 +122,40 @@ public class Database {
         refresh(MyApplication.getContext());
         long count = 0;
         Cursor cursor =db.query(today,null,null,null,null,null,null);
+        if (cursor.moveToFirst()){
+            do {
+                count += cursor.getLong(cursor.getColumnIndex("duration"));
+            }while (cursor.moveToNext());
+        }
+        /*Date date = new Date(count);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+        String time = dateFormat.format(date);
+        return time;*/
+        long between=count/1000;//除以1000是为了转换成秒
+
+        long day=between/(24*3600);
+
+        long hour=between%(24*3600)/3600;
+
+        long minute=between%3600/60;
+
+        long second=between%60;
+        String duration;
+        if (day>0){
+            duration = day+"天"+hour+"小时"+minute+"分钟"+second+"秒";
+        }else if (hour>0){
+            duration =hour+"小时"+minute+"分钟"+second+"秒";
+        }else if (minute>0){
+            duration =minute+"分钟"+second+"秒";
+        }else {
+            duration =second+"秒";
+        }
+        return duration;
+    }
+    public String count_time(String thisDate){
+        refresh(MyApplication.getContext());
+        long count = 0;
+        Cursor cursor =db.query("duration" + thisDate,null,null,null,null,null,null);
         if (cursor.moveToFirst()){
             do {
                 count += cursor.getLong(cursor.getColumnIndex("duration"));

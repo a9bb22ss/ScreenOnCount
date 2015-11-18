@@ -3,6 +3,8 @@ package com.example.chenf.screenoncount;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.util.Log;
+
 import java.util.Calendar;
 
 /**
@@ -31,7 +33,14 @@ public final class Statistics {
         Long start;
         Long end2;
         Long end = Calendar.getInstance().getTime().getTime();
-        Cursor cursor =database.query(Database.today,null,null,null,null,null,null);
+        Cursor cursor = database.query(Database.today, null, null, null, null, null, null);
+        if(!cursor.moveToFirst()){
+            try {
+                cursor = database.query(Database.Yesterday, null, null, null, null, null, null);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
         if (cursor.moveToLast()) {
             //结束时间是否为空，为空则储存
             if (cursor.isNull(cursor.getColumnIndex("end"))) {
