@@ -36,8 +36,9 @@ public class DatePickerFragment extends DialogFragment implements
         try {
             Cursor cursor = Statistics.database.query(thisday,null,null,null,null,null,null);
             if (cursor.moveToFirst()){
-                Intent intent = new Intent(MyApplication.getContext(), MainActivity.class);
+                Intent intent = new Intent(MyApplication.getContext(), SecondActivity.class);
                 intent.putExtra("date", date);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
                 Log.d("OnDateSet", "开启成功");
             }

@@ -6,17 +6,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.Window;
-import android.widget.AdapterView;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.example.chenf.screenoncount.Receiver.ScreenOnOrOffReceiver;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -24,72 +23,73 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements RecyclerAdapter.OnRecyclerViewListener{
 
     private List<Duration> durations = new ArrayList<>();
     private String thisDate = null;
-//    private Database database = Database.getDataBase(MainActivity.this);
+    private RecyclerAdapter recyclerAdapter;
 
     /**
      *界面组件初始化
      */
-    private ListView listView;
+    private RecyclerView recyclerView;
     private TextView date;
     private TextView times;
     private TextView all_duration;
     private refreshReceiver refresh;
+    private SwipeRefreshLayout swipeRefresh;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 //        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        initView();
         Intent start_service = new Intent(this, Service.class);
         startService(start_service);
-        thisDate = getIntent().getStringExtra("date");
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(Intent.ACTION_SCREEN_ON);
         intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
         refresh = new refreshReceiver();
         registerReceiver(refresh, intentFilter);
         durations = initList();//初始化时长数据
-        DurationAdapter adapter = new DurationAdapter(MainActivity.this,R.layout.list_item,durations);
-        listView = (ListView) findViewById(R.id.list);
-        times = (TextView) findViewById(R.id.times);
-        date = (TextView) findViewById(R.id.date);
-        all_duration = (TextView) findViewById(R.id.all_duration);
-        listView.setAdapter(adapter);
+        recyclerView.setHasFixedSize(true);
+        LinearLayoutManager manager = new LinearLayoutManager(this);
+        manager.setOrientation(LinearLayoutManager.VERTICAL);
+        recyclerView.setLayoutManager(manager);
+        recyclerAdapter = new RecyclerAdapter(durations);
+        recyclerAdapter.setOnRecyclerViewListener(this);
+        recyclerView.setAdapter(recyclerAdapter);
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+        int tmp = Statistics.database.getTimes();
+        Date date_cotent = new Date();
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+
+        String time_str = sdf.format(date_cotent);
+        date.setText(time_str);
+        times.setText(String.valueOf(tmp));
+        all_duration.setText(Statistics.database.count_time());
+
+        swipeRefresh.setColorSchemeColors(Color.BLUE, Color.RED, Color.YELLOW, Color.GREEN);
+        swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Duration this_duration = durations.get(position);
-                Bundle bundle = new Bundle();
-                Intent intent = new Intent(MainActivity.this,ParticularsActivity.class);
-                bundle.putSerializable("duration",this_duration);
-                intent.putExtras(bundle);
-                startActivity(intent);
+            public void onRefresh() {
+                refresh();
+                swipeRefresh.setRefreshing(false);
             }
         });
 
-        if (thisDate == null) {
-            int tmp = Statistics.database.getTimes();
-            Date date_cotent = new Date();
-
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-
-            String time_str = sdf.format(date_cotent);
-            date.setText(time_str);
-            times.setText(String.valueOf(tmp));
-            all_duration.setText(Statistics.database.count_time());
-        }else {
-            int tmp = Statistics.database.getTimes(thisDate);
-            date.setText(thisDate);
-            times.setText(String.valueOf(tmp));
-            all_duration.setText(Statistics.database.count_time(thisDate));
-        }
     }
 
+    private void initView(){
+        recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
+        times = (TextView) findViewById(R.id.times);
+        date = (TextView) findViewById(R.id.date);
+        all_duration = (TextView) findViewById(R.id.all_duration);
+        swipeRefresh = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
+    }
     private List<Duration> initList(){
         Statistics.database.delete();
         List<Duration> list = new ArrayList<>();
@@ -156,30 +156,48 @@ public class MainActivity extends Activity {
         startService(start_service);
         unregisterReceiver(refresh);
     }
+
+    @Override
+    public void onItemClick(int position) {
+        Duration this_duration = durations.get(position);
+        Bundle bundle = new Bundle();
+        Intent intent = new Intent(MainActivity.this,ParticularsActivity.class);
+        bundle.putSerializable("duration",this_duration);
+        intent.putExtras(bundle);
+        startActivity(intent);
+    }
+
+    @Override
+    public boolean onItemLongClick(int position) {
+        return false;
+    }
+
     class refreshReceiver extends BroadcastReceiver{
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (thisDate == null) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            refresh();
+        }
+    }
+
+    //刷新数据和界面
+    private void refresh(){
+        new  Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
                 durations = initList();//初始化时长数据
-                DurationAdapter adapter = new DurationAdapter(MainActivity.this, R.layout.list_item, durations);
                 int tmp = Statistics.database.getTimes();
                 Date date_cotent = new Date();
 
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 
                 String time_str = sdf.format(date_cotent);
-                listView.setAdapter(adapter);
+                recyclerAdapter.notifyDataSetChanged();
                 date.setText(time_str);
                 times.setText(String.valueOf(tmp));
                 all_duration.setText(Statistics.database.count_time());
             }
-        }
+        },100);
     }
 @Override
     public boolean onCreateOptionsMenu(Menu menu) {

@@ -39,6 +39,7 @@ public class Database {
         return dataBase;
     }
 
+    //更新数据库
     public void refresh(Context context){
         VERSION = Integer.parseInt(TimeTransform.getDate(Calendar.getInstance().getTime().getTime()));
         today = "duration" + TimeTransform.getDate(Calendar.getInstance().getTime().getTime());
