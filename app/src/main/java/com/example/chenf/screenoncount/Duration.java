@@ -11,6 +11,7 @@ public class Duration implements Serializable{
     private String start_time;
     private String end_time;
 
+    
     public String getStart_time() {
         return start_time;
     }
